@@ -1,0 +1,22 @@
+# ── Secrets — never commit these ──
+.env.local
+.env.*.local
+.env
+
+# ── Next.js ──
+.next/
+out/
+
+# ── Dependencies ──
+node_modules/
+
+# ── OS / editor ──
+.DS_Store
+*.pem
+.idea/
+.vscode/
+
+# ── Misc ──
+npm-debug.log*
+*.tsbuildinfo
+next-env.d.ts
