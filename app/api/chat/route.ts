@@ -716,7 +716,7 @@ export async function POST(req: NextRequest) {
       start(controller) {
         controller.enqueue(encoder.encode(sse({
           type: 'done',
-          content: `You have reached the 10,000 token limit for this account. No further requests can be processed.`,
+          content: `You have reached the 100,000 token limit for this account. No further requests can be processed.`,
         })))
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
