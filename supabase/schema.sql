@@ -26,6 +26,8 @@ CREATE TABLE preferences (
   -- Seniority & Location
   seniority_years INTEGER,
   location TEXT,
+  -- Token usage tracking (hard limit: 10,000 — never adjustable)
+  tokens_used INTEGER DEFAULT 0 NOT NULL,
   -- Metadata
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

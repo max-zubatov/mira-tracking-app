@@ -7,6 +7,9 @@ export const dynamic = 'force-dynamic'
 
 const client = new Anthropic()
 
+// Hard token limit — never adjustable, enforced server-side only
+const TOKEN_LIMIT = 10_000
+
 function getSteelClient() {
   return new Steel({ steelAPIKey: process.env.STEEL_API_KEY })
 }
@@ -671,9 +674,38 @@ export async function POST(req: NextRequest) {
   const { messages } = await req.json()
   const preferences = await fetchPrefsFromDB()
 
+  // ── Token gate (server-side, not bypassable) ──────────────────────────────
+  const db = createServerClient()
+  const { data: usageRow } = await db
+    .from('preferences')
+    .select('id, tokens_used')
+    .limit(1)
+    .maybeSingle<{ id: string; tokens_used: number }>()
+
+  const tokensAlreadyUsed = usageRow?.tokens_used ?? 0
+
+  if (tokensAlreadyUsed >= TOKEN_LIMIT) {
+    const encoder = new TextEncoder()
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(sse({
+          type: 'done',
+          content: `You have reached the 10,000 token limit for this account. No further requests can be processed.`,
+        })))
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+        controller.close()
+      },
+    })
+    return new Response(body, {
+      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+    })
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const encoder = new TextEncoder()
   let jobsChanged = false
   let prefsChanged = false
+  let sessionTokens = 0  // tokens used in this request
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -703,6 +735,9 @@ export async function POST(req: NextRequest) {
             messages: agentMessages,
             tools,
           })
+
+          // Accumulate real token usage reported by Anthropic
+          sessionTokens += (response.usage.input_tokens ?? 0) + (response.usage.output_tokens ?? 0)
 
           const textBlocks   = response.content.filter((b) => b.type === 'text')
           const toolUseBlocks = response.content.filter((b) => b.type === 'tool_use')
@@ -784,6 +819,13 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         send({ type: 'done', content: `Error: ${String(err)}` })
       } finally {
+        // Persist token usage — always runs, even on error
+        if (sessionTokens > 0 && usageRow?.id) {
+          await db
+            .from('preferences')
+            .update({ tokens_used: tokensAlreadyUsed + sessionTokens })
+            .eq('id', usageRow.id)
+        }
         if (jobsChanged) controller.enqueue(encoder.encode(sse({ type: 'action', action: 'jobs_changed' })))
         if (prefsChanged) controller.enqueue(encoder.encode(sse({ type: 'action', action: 'preferences_changed' })))
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
