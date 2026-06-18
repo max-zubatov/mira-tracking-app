@@ -63,6 +63,10 @@ INSERT INTO preferences (
   ARRAY['TypeScript','React','Node.js']::TEXT[], 3
 );
 
+-- Disable RLS (no multi-user auth, anon key needs full access)
+ALTER TABLE preferences DISABLE ROW LEVEL SECURITY;
+ALTER TABLE jobs DISABLE ROW LEVEL SECURITY;
+
 -- Auto-update updated_at
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
