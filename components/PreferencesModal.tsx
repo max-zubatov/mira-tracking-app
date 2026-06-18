@@ -51,6 +51,8 @@ export default function PreferencesModal({ onClose, onSaved }: PreferencesModalP
   const [form, setForm] = useState<Partial<Preferences>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [saveOk, setSaveOk] = useState(false)
 
   useEffect(() => {
     loadPreferences().then(data => { setForm(data); setLoading(false) })
@@ -62,11 +64,26 @@ export default function PreferencesModal({ onClose, onSaved }: PreferencesModalP
 
   async function handleSave() {
     setSaving(true)
-    await fetch('/api/preferences', {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    })
-    setSaving(false); onSaved()
+    setSaveError('')
+    setSaveOk(false)
+    try {
+      const res = await fetch('/api/preferences', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setSaveError(body.error ?? `Server error ${res.status}`)
+      } else {
+        setSaveOk(true)
+        setTimeout(() => setSaveOk(false), 2000)
+        onSaved()
+      }
+    } catch (e) {
+      setSaveError(String(e))
+    } finally {
+      setSaving(false)
+    }
   }
 
   const inputStyle = {
@@ -185,11 +202,22 @@ export default function PreferencesModal({ onClose, onSaved }: PreferencesModalP
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4" style={{ borderTop: '1px solid var(--line)' }}>
+        <div className="px-6 py-4 flex flex-col gap-2" style={{ borderTop: '1px solid var(--line)' }}>
+          {saveError && (
+            <p className="text-[11px] text-center px-2 py-1.5 rounded-lg"
+              style={{ color: '#f87171', background: 'rgba(248,113,113,0.08)', fontFamily: 'var(--mono)' }}>
+              {saveError}
+            </p>
+          )}
           <button onClick={handleSave} disabled={saving}
             className="w-full text-[12px] font-bold py-2.5 rounded-xl transition-all uppercase tracking-[0.1em] flex items-center justify-center gap-2"
-            style={{ background: 'var(--indigo)', color: 'var(--paper)', fontFamily: 'var(--mono)', opacity: saving ? 0.5 : 1 }}>
-            {saving ? <><div className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} />Saving</> : 'Save preferences'}
+            style={{
+              background: saveOk ? '#16a34a' : 'var(--indigo)',
+              color: 'var(--paper)', fontFamily: 'var(--mono)', opacity: saving ? 0.5 : 1,
+            }}>
+            {saving
+              ? <><div className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} />Saving</>
+              : saveOk ? '✓ Saved' : 'Save preferences'}
           </button>
         </div>
       </div>
