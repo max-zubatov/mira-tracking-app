@@ -80,7 +80,7 @@ export default function PreferencesModal({ onClose, onSaved }: PreferencesModalP
         .from('preferences')
         .select('id')
         .limit(1)
-        .maybeSingle()
+        .maybeSingle<{ id: string }>()
 
       if (fetchErr) throw new Error(fetchErr.message)
 
