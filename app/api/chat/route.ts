@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import Steel from 'steel-sdk'
 import { createServerClient } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
@@ -9,12 +8,6 @@ const client = new Anthropic()
 
 // Hard token limit — never adjustable, enforced server-side only
 const TOKEN_LIMIT = 10_000
-
-function getSteelClient() {
-  const key = process.env.STEEL_API_KEY
-  if (!key) throw new Error('STEEL_API_KEY not configured — skipping Steel tier')
-  return new Steel({ steelAPIKey: key })
-}
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
@@ -139,7 +132,11 @@ async function findMatchingCompanies(industry: string, companySize: string, coun
 }
 
 async function steelScrape(url: string, useProxy = true): Promise<string> {
-  const steel = getSteelClient() // throws if key missing — caller's try/catch handles it
+  const key = process.env.STEEL_API_KEY
+  if (!key) throw new Error('STEEL_API_KEY not configured')
+  // Dynamic import prevents the SDK from touching env at module load time
+  const { default: Steel } = await import('steel-sdk')
+  const steel = new Steel({ steelAPIKey: key })
   const result = await steel.scrape({ url, format: ['markdown'], useProxy })
   return result.content.markdown ?? ''
 }
