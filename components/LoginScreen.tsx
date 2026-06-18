@@ -65,7 +65,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               margin: 0,
               lineHeight: 1,
             }}>
-              Arc
+              Mira
             </h1>
             <p className="text-[12px] mt-1.5" style={{ color: 'var(--grey)', fontFamily: 'var(--mono)' }}>
               Job tracker
