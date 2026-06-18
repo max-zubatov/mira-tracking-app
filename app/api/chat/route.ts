@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 const client = new Anthropic()
 
 // Hard token limit — never adjustable, enforced server-side only
-const TOKEN_LIMIT = 10_000
+const TOKEN_LIMIT = 100_000
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
