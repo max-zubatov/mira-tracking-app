@@ -7,6 +7,9 @@ export async function GET() {
   const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasAnon = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const hasServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+  const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY
+  const hasSerperKey = !!process.env.SERPER_API_KEY
+  const hasSteelKey = !!process.env.STEEL_API_KEY
 
   let readResult = null
   let writeResult = null
@@ -37,7 +40,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    env: { hasUrl, hasAnon, hasServiceRole },
+    env: { hasUrl, hasAnon, hasServiceRole, hasAnthropicKey, hasSerperKey, hasSteelKey },
     db: { readResult, readError, writeResult, writeError },
   })
 }

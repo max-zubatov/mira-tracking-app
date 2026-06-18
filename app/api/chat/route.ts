@@ -686,6 +686,17 @@ function sse(data: object): string {
 // ─── Main route ───────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  // Fail fast with a clear message if required keys are missing
+  if (!process.env.ANTHROPIC_API_KEY) {
+    const enc = new TextEncoder()
+    const body = new ReadableStream({ start(c) {
+      c.enqueue(enc.encode(sse({ type: 'done', content: 'Missing ANTHROPIC_API_KEY — add it in Vercel → Settings → Environment Variables, then redeploy.' })))
+      c.enqueue(enc.encode('data: [DONE]\n\n'))
+      c.close()
+    }})
+    return new Response(body, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' } })
+  }
+
   const { messages } = await req.json()
   const preferences = await fetchPrefsFromDB()
 
