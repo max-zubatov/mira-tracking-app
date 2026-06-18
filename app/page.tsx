@@ -52,7 +52,7 @@ export default function Home() {
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 h-14 border-b shrink-0"
+        <header className="flex items-center justify-end px-6 h-14 border-b shrink-0"
           style={{ background: '#FCFCF8', borderColor: 'rgba(0,0,0,0.08)' }}>
 
           <div className="flex items-center gap-1">
