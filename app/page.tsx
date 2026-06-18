@@ -55,10 +55,6 @@ export default function Home() {
         <header className="flex items-center justify-between px-6 h-14 border-b shrink-0"
           style={{ background: '#FCFCF8', borderColor: 'rgba(0,0,0,0.08)' }}>
 
-          <span style={{ color: 'var(--ink)', fontFamily: 'var(--serif)', fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1, fontSize: '22px' }}>
-            Arc
-          </span>
-
           <div className="flex items-center gap-1">
             {/* My Account button */}
             <button
