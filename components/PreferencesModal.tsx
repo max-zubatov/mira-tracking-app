@@ -101,10 +101,12 @@ export default function PreferencesModal({ onClose, onSaved }: PreferencesModalP
       }
 
       let error
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const table = (db as any).from('preferences')
       if (existing?.id) {
-        ;({ error } = await db.from('preferences').update(fields).eq('id', existing.id))
+        ;({ error } = await table.update(fields).eq('id', existing.id))
       } else {
-        ;({ error } = await db.from('preferences').insert({ ...fields,
+        ;({ error } = await table.insert({ ...fields,
           compensation_fit: fields.compensation_fit ?? 3,
           company_size_fit: fields.company_size_fit ?? 3,
           industry_fit:     fields.industry_fit     ?? 3,
