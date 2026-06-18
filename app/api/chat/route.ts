@@ -11,7 +11,9 @@ const client = new Anthropic()
 const TOKEN_LIMIT = 10_000
 
 function getSteelClient() {
-  return new Steel({ steelAPIKey: process.env.STEEL_API_KEY })
+  const key = process.env.STEEL_API_KEY
+  if (!key) throw new Error('STEEL_API_KEY not configured — skipping Steel tier')
+  return new Steel({ steelAPIKey: key })
 }
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
@@ -137,7 +139,7 @@ async function findMatchingCompanies(industry: string, companySize: string, coun
 }
 
 async function steelScrape(url: string, useProxy = true): Promise<string> {
-  const steel = getSteelClient()
+  const steel = getSteelClient() // throws if key missing — caller's try/catch handles it
   const result = await steel.scrape({ url, format: ['markdown'], useProxy })
   return result.content.markdown ?? ''
 }
@@ -534,10 +536,26 @@ async function updatePreferences(input: Record<string, unknown>): Promise<string
 }
 
 async function fetchJobUrl(url: string): Promise<string> {
+  // Try Steel first, fall back to plain fetch if key not set
   try {
     const md = await steelScrape(url, true)
-    if (!md) return JSON.stringify({ error: 'No content returned' })
-    return JSON.stringify({ url, content: md.slice(0, 8000) })
+    if (md) return JSON.stringify({ url, content: md.slice(0, 8000) })
+  } catch {}
+
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; JobTracker/1.0)' },
+      signal: AbortSignal.timeout(10000),
+    })
+    const html = await res.text()
+    const text = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 6000)
+    return JSON.stringify({ url, content: text })
   } catch (e) {
     return JSON.stringify({ error: String(e) })
   }
