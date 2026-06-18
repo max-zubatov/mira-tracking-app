@@ -2,11 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { Preferences } from '@/lib/types'
+import { getSupabase } from '@/lib/supabase'
 
 async function loadPreferences(): Promise<Partial<Preferences>> {
-  const res = await fetch('/api/preferences', { cache: 'no-store' })
-  if (!res.ok) return {}
-  return res.json()
+  const db = getSupabase()
+  const { data, error } = await db
+    .from('preferences')
+    .select('*')
+    .limit(1)
+    .maybeSingle()
+  if (error) console.error('load prefs:', error.message)
+  return data ?? {}
 }
 
 function TagInput({ values, onChange, placeholder }: {
@@ -67,18 +73,51 @@ export default function PreferencesModal({ onClose, onSaved }: PreferencesModalP
     setSaveError('')
     setSaveOk(false)
     try {
-      const res = await fetch('/api/preferences', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        setSaveError(body.error ?? `Server error ${res.status}`)
-      } else {
-        setSaveOk(true)
-        setTimeout(() => setSaveOk(false), 2000)
-        onSaved()
+      const db = getSupabase()
+
+      // Get the existing row id
+      const { data: existing, error: fetchErr } = await db
+        .from('preferences')
+        .select('id')
+        .limit(1)
+        .maybeSingle()
+
+      if (fetchErr) throw new Error(fetchErr.message)
+
+      const fields = {
+        compensation_min:    form.compensation_min,
+        compensation_max:    form.compensation_max,
+        compensation_fit:    form.compensation_fit,
+        company_size_values: form.company_size_values,
+        company_size_fit:    form.company_size_fit,
+        industry_values:     form.industry_values,
+        industry_fit:        form.industry_fit,
+        role_values:         form.role_values,
+        role_fit:            form.role_fit,
+        skill_values:        form.skill_values,
+        skills_fit:          form.skills_fit,
+        seniority_years:     form.seniority_years ?? null,
+        location:            form.location ?? null,
       }
+
+      let error
+      if (existing?.id) {
+        ;({ error } = await db.from('preferences').update(fields).eq('id', existing.id))
+      } else {
+        ;({ error } = await db.from('preferences').insert({ ...fields,
+          compensation_fit: fields.compensation_fit ?? 3,
+          company_size_fit: fields.company_size_fit ?? 3,
+          industry_fit:     fields.industry_fit     ?? 3,
+          role_fit:         fields.role_fit         ?? 3,
+          skills_fit:       fields.skills_fit       ?? 3,
+        }))
+      }
+
+      if (error) throw new Error(error.message)
+
+      setSaveOk(true)
+      setTimeout(() => setSaveOk(false), 2000)
+      onSaved()
     } catch (e) {
       setSaveError(String(e))
     } finally {
